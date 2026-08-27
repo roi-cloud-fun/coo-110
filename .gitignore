@@ -2,3 +2,12 @@
 desktop.ini
 .DS_Store
 Thumbs.db
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+.build/
+terraform.tfvars

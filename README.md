@@ -12,11 +12,21 @@ deployed **broken on purpose**. Students create nothing — they diagnose what i
 ```
 coo-110/
 ├── lab_1/README.md   AWS Compute and Storage Troubleshooting  (60 min)
-└── lab_2/README.md   AWS IAM and Network Troubleshooting      (60 min)
+├── lab_2/README.md   AWS IAM and Network Troubleshooting      (60 min)
+└── demo/             Instructor demo environment - Terraform + runbook
+    ├── README.md     Deploy instructions and the five chapter demos
+    ├── *.tf          One application, deployed broken on purpose
+    └── scripts/      Lambda source for the injected timeout fault
 ```
 
-The per-student Terraform environment is maintained separately and deployed by the instructor
-before class. Students never run Terraform.
+**Students** need only `lab_1/` and `lab_2/` — their environment is deployed for them and they
+never run Terraform.
+
+**Instructors** deploy [`demo/`](demo/README.md) once for the front of the room. It stands up
+"OrderFlow", a small order-processing app carrying one injected fault per chapter, with VPC Flow
+Logs, CloudTrail, a CloudWatch dashboard and alarms wired around it — so every chapter demo runs
+against real infrastructure instead of placeholder commands. Roughly $1.30/day; `terraform
+destroy` when done.
 
 ## The two labs
 
