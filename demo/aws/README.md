@@ -1,11 +1,11 @@
-# Instructor Demo Environment — "OrderFlow"
+# AWS Demo Environment — "OrderFlow"
 
 Instructor demo environment for **COO-110 AWS Troubleshooting Deep Dive**. One coherent
 application, deployed broken on purpose, with the full observability stack wired around it.
 
 It exists so every chapter demo runs against real infrastructure instead of placeholder commands
 read off a slide. **This is not the student lab environment** — the student labs are in
-[`../lab_1/`](../lab_1/README.md) and [`../lab_2/`](../lab_2/README.md), and their per-student
+[`../../lab_1/`](../../lab_1/README.md) and [`../../lab_2/`](../../lab_2/README.md), and their per-student
 Terraform is maintained separately. This stack is deployed once, by the instructor, for the
 front of the room.
 

@@ -13,20 +13,27 @@ deployed **broken on purpose**. Students create nothing — they diagnose what i
 coo-110/
 ├── lab_1/README.md   AWS Compute and Storage Troubleshooting  (60 min)
 ├── lab_2/README.md   AWS IAM and Network Troubleshooting      (60 min)
-└── demo/             Instructor demo environment - Terraform + runbook
-    ├── README.md     Deploy instructions and the five chapter demos
-    ├── *.tf          One application, deployed broken on purpose
-    └── scripts/      Lambda source for the injected timeout fault
+└── demo/             Instructor demo environments - Terraform + runbooks
+    ├── aws/          OrderFlow on AWS   - demos for chapters 1-5
+    └── azure/        OrderFlow on Azure - demos for chapters 6-10
 ```
 
 **Students** need only `lab_1/` and `lab_2/` — their environment is deployed for them and they
 never run Terraform.
 
-**Instructors** deploy [`demo/`](demo/README.md) once for the front of the room. It stands up
-"OrderFlow", a small order-processing app carrying one injected fault per chapter, with VPC Flow
-Logs, CloudTrail, a CloudWatch dashboard and alarms wired around it — so every chapter demo runs
-against real infrastructure instead of placeholder commands. Roughly $1.30/day; `terraform
-destroy` when done.
+**Instructors** deploy the demo stacks once for the front of the room. Each stands up
+"OrderFlow" — the same small order-processing application — carrying one injected fault per
+chapter, with flow logs, audit logging, a dashboard and alarms wired around it.
+
+| Stack | Chapters | Cost | |
+|---|---|---|---|
+| [`demo/aws`](demo/aws/README.md) | 1–5 | ~$1.30/day | VPC Flow Logs, CloudTrail with S3 data events, CloudWatch dashboard |
+| [`demo/azure`](demo/azure/README.md) | 6–10 | ~$2.20/day | NSG flow logs + Traffic Analytics, Log Analytics, Azure Monitor |
+
+**The two mirror each other fault for fault.** The same five investigations run in both clouds —
+different tooling, identical reasoning — which is what lets the Azure chapters be *demonstrated*
+rather than lectured. The cross-cloud mapping is the first table in
+[`demo/azure/README.md`](demo/azure/README.md).
 
 ## The two labs
 
