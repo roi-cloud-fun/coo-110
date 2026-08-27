@@ -57,10 +57,12 @@ The bucket carries a random six-character suffix, so you discover it rather than
 
 **Goal:** Determine whether the reported instance has an infrastructure fault, a guest fault, or no fault at all — and be able to prove which.
 
-A ticket that says "check this instance" is not a diagnosis. Before you look at anything inside the instance, EC2 gives you two independent checks that between them divide the whole problem space in half.
+A ticket that says "check this instance" is not a diagnosis. Before you look at anything inside the instance, EC2 runs its own checks, and the two that matter most divide the whole problem space in half.
 
-- **System status check** — reports on **AWS's** infrastructure underneath your instance: host hardware, host networking, power. If this fails, nothing you do inside the guest fixes it; the remedy is to stop and start the instance so it lands on new hardware.
-- **Instance status check** — reports on **your** guest operating system: kernel panic, exhausted disk, a corrupt `/etc/fstab`, a failed network stack. If this fails, the fix is inside the instance.
+- **System status** — reports on **AWS's** infrastructure underneath your instance: host hardware, host networking, power. If this fails, nothing you do inside the guest fixes it; the remedy is to stop and start the instance so it lands on new hardware. The underlying CloudWatch metric is `StatusCheckFailed_System`.
+- **Instance status** — reports on **your** guest operating system: kernel panic, exhausted disk, a corrupt `/etc/fstab`, a failed network stack. If this fails, the fix is inside the instance. The metric is `StatusCheckFailed_Instance`.
+
+The console shows two more alongside them. **EBS status** covers the attached volumes, and **Application status** is a newer check that only reports if something has been associated with it — expect `None associated` here. Neither is used in this lab, but knowing they exist stops you wondering which of four results you are supposed to be reading.
 
 1. **Open the EC2 console.** Type `ec2` in the console search bar and choose **EC2**. In the left navigation pane, choose **Instances**.
     <!-- source: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-system-instance-status-check.html -->
@@ -69,11 +71,20 @@ A ticket that says "check this instance" is not a diagnosis. Before you look at 
 
     **Expected Result:** Exactly one instance, with **Instance state** showing `Running`.
 
-3. **Read both checks.** Select the instance and open the **Status and alarms** tab.
+3. **Read the checks.** Select the instance and open the **Status and alarms** tab, then look at the **Status checks** section at the top.
 
-    **Expected Result:** Both **System status check** and **Instance status check** report a passing state. Record what you see — a baseline is only useful if you wrote it down.
+    **Expected Result:** Four rows, each with its own verdict:
 
-> **Common Pitfall:** In the 2026 console these checks live on the **Status and alarms** tab. Older documentation and older screenshots call it the **Status checks** tab. If you are looking for a tab by that name you will not find it.
+    | Check | Reads |
+    |-------|-------|
+    | **System status** | `Check passed` |
+    | **Instance status** | `Check passed` |
+    | **EBS status** | `Check passed` |
+    | **Application status - new** | `None associated or included` |
+
+    The first two are the ones this task is about. Record what you see — a baseline is only useful if you wrote it down.
+
+> **Common Pitfall:** In the 2026 console these checks live on the **Status and alarms** tab, inside a **Status checks** section. Older documentation and screenshots refer to a **Status checks** *tab*, which no longer exists — and they name the individual rows "System status check" and "Instance status check", where the console now says simply **System status** and **Instance status**. The concepts and the CloudWatch metric names are unchanged; only the console labels moved.
 
 4. **Confirm the same result from the CLI.** Open CloudShell with the terminal icon (`>_`) in the top navigation bar, then set your working variables.
 
@@ -98,6 +109,16 @@ A ticket that says "check this instance" is not a diagnosis. Before you look at 
     <!-- source: https://docs.aws.amazon.com/cloudshell/latest/userguide/working-with-aws-cli.html -->
 
     **Expected Result:** One instance ID, for example `instance=i-0a1b2c3d4e5f67890`. If this prints `instance=` with nothing after it, your `STUDENT_ID` does not match your resource names — fix that before continuing, because every later command depends on it.
+
+> **Common Pitfall:** `STUDENT_ID` and `REGION` are used by every remaining task in this lab, and a CloudShell session drops its shell variables when it times out after a period of inactivity. If you take a break and come back to find commands returning nothing, or errors naming an empty resource, the variables are gone rather than the resources. Re-run this block to restore them:
+>
+> ```bash
+> STUDENT_ID=01
+> REGION=$AWS_REGION
+> INSTANCE_ID=$(aws ec2 describe-instances --region "${REGION}" --filters "Name=tag:Name,Values=cf110-${STUDENT_ID}-lab1-target" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
+> ```
+>
+> An unset variable expands to an empty string rather than raising an error, which is why the failure looks like a missing resource instead of a missing variable.
 
 5. **Query both status checks directly.**
 
@@ -174,17 +195,22 @@ The `cf110-01-slow-function` Lambda is invoked once a minute by an EventBridge r
 2. **Open the log query editor.** Type `cloudwatch` in the console search bar and choose **CloudWatch**. In the left navigation pane, expand **Logs**, then choose **Log Analytics**.
     <!-- source: https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/AnalyzingLogData.html -->
 
-    **Expected Result:** A query editor with a log group selector, a query box, and a time-range selector across the top.
+    **Expected Result:** A query editor. Across the top are a **Query by** selector reading **All log groups**, a **Search log groups...** box with a **Browse** button beside it, and a row of time-range buttons — **5m**, **30m**, **1h**, **3h**, **12h** — next to a date picker.
 
 > **Common Pitfall:** There is no menu item called **Logs Insights** in the current console. AWS replaced it during 2026 with **Log Analytics**, which combines Logs Insights, Live Tail, and Contributor Insights into one surface. The **Logs** group now contains **Log Management**, **Log Analytics**, and **Log Anomalies** — so a student following any older instruction, screenshot, or AWS documentation page that says "choose Logs Insights" will not find it. Most published material, including parts of the AWS documentation, still shows the old name.
 
 > **Common Pitfall:** The first time you open **Log Analytics** a dialog appears explaining the new experience, offering **OK** and **Opt out (Logs Insights)**. Choose **OK** — this lab is written against the new editor, and the query language is identical either way. If someone has already opted out on your account you will land in the classic Logs Insights editor instead; every query in this lab runs unchanged there. You can switch back at any time from the **Preferences** menu at the top right.
 
-3. **Select the log group.** In the log group selector choose `/aws/lambda/cf110-01-slow-function`, substituting your student ID.
+3. **Select the log group.** Choose **Browse** next to the search box. In the dialog that opens, find `/aws/lambda/cf110-01-slow-function` — substituting your student ID — tick its checkbox, and apply the selection.
 
-4. **Set the time range** to **30 minutes** using the selector above the query editor. The drumbeat rule invokes once a minute, so 30 minutes is roughly 30 invocations — enough to show a pattern without waiting.
+    **Expected Result:** The **Query by** selector now names your log group instead of **All log groups**, and the first line of the query editor updates to a `SOURCE` line naming it.
 
-5. **Count how often the function fails.** Replace the default query with:
+> **Common Pitfall:** The editor opens **prefilled** with a query whose first line is
+> `SOURCE logGroups(namePrefix: [], class: "STANDARD") START=-1w END=0s |`. That `SOURCE` line is what scopes the query to a log group and a time window — it is not decoration. If you select the whole editor and paste over it, you delete the scope along with the sample query, and what runs afterwards is not what you think you are running. In every step below, **replace only the lines beneath the `SOURCE` line** and leave that first line in place.
+
+4. **Set the time range** by choosing the **30m** button above the query editor. The drumbeat rule invokes once a minute, so thirty minutes is roughly thirty invocations — enough to show a pattern without waiting.
+
+5. **Count how often the function fails.** Leaving the `SOURCE` line in place, replace the lines below it with:
 
     ```
     fields @timestamp, @message
@@ -194,7 +220,7 @@ The `cf110-01-slow-function` Lambda is invoked once a minute by an EventBridge r
     ```
     <!-- source: https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax.html -->
 
-    Choose **Run query**.
+    Choose **Run** — the orange button at the bottom right of the editor, or press `Ctrl+Enter`.
 
     **Expected Result:** Several `REPORT` rows, each ending in `Status: timeout` and carrying `Duration: 30000.00 ms`. Roughly one invocation in three fails. The exact count varies because the fault is random — what matters is that failures are frequent but not universal.
 

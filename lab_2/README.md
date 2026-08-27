@@ -93,6 +93,10 @@ An application running on an EC2 instance reports `AccessDenied` when it reads f
 
     **Expected Result:** Both values print. If `BUCKET` is empty, your `STUDENT_ID` does not match your resource names.
 
+> **Common Pitfall:** `STUDENT_ID`, `REGION`, `ACCOUNT` and `PRIVATE_ID` are used by every remaining task in this lab, and a CloudShell session drops its shell variables when it times out after a period of inactivity. If you take a break and return to find commands returning nothing — particularly in Task 3, which reuses `PRIVATE_ID` set in step 2 below — the variables are gone rather than the resources. Re-run steps 1 and 2 to restore them.
+>
+> An unset variable expands to an empty string rather than raising an error, so `--instance-ids ""` fails as though the instance were missing. If a command behaves as if a resource has vanished, echo the variable before investigating the resource.
+
 2. **Find which role the application actually runs as.** Never assume — an instance profile is the only thing that determines an EC2 application's identity.
 
     ```bash
@@ -384,7 +388,9 @@ The load balancer in front of the web tier reports its target as unhealthy. The 
 
 4. **Prove it from the network's own record.** A security group rejection is visible in VPC Flow Logs, which is what turns a hypothesis into evidence.
 
-    In the CloudWatch console expand **Logs** in the left navigation pane and choose **Log Analytics** — this is what replaced Logs Insights in 2026, so there is no menu item by the old name. Select the log group `/cf110/01/vpc-flow-logs`, set the time range to **30 minutes**, and run:
+    In the CloudWatch console expand **Logs** in the left navigation pane and choose **Log Analytics** — this is what replaced Logs Insights in 2026, so there is no menu item by the old name. Choose **Browse**, tick `/cf110/01/vpc-flow-logs` in the dialog and apply it, then choose the **30m** time-range button.
+
+    Leaving the prefilled `SOURCE` line at the top of the editor in place, replace the lines beneath it with:
 
     ```
     fields @timestamp, srcAddr, dstAddr, srcPort, dstPort, action
@@ -393,6 +399,8 @@ The load balancer in front of the web tier reports its target as unhealthy. The 
     | limit 50
     ```
     <!-- source: https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-cwl.html -->
+
+    Choose **Run**, or press `Ctrl+Enter`.
 
     **Expected Result:** Rows of rejected traffic to port 80, roughly two every 30 seconds — the health check interval, multiplied by the load balancer's nodes in each Availability Zone:
 
