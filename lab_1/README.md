@@ -49,11 +49,11 @@ The lab environment is deployed before class. **You create nothing** — every r
 
 | Resource | Name | Used in |
 |----------|------|---------|
-| EC2 instance | `cf110-01-lab1-target` | Task 1 |
+| EC2 instance — the application server | `cf110-01-app` | Tasks 1 and 4 |
 | Lambda function and its log group | `cf110-01-slow-function` | Task 2 |
 | IAM role for the S3 investigation | `cf110-01-CrossAccountRole` | Task 3 |
 | S3 bucket with fixture objects | `cf110-01-target-<suffix>` | Task 3 |
-| gp2 EBS volume attached at `/dev/sdf` | `cf110-01-lab1-burst-volume` | Task 4 |
+| gp2 EBS volume attached at `/dev/sdf` | `cf110-01-burst-volume` | Task 4 |
 
 The bucket carries a random six-character suffix, so you discover it rather than type it.
 
@@ -77,7 +77,7 @@ The console shows two more alongside them. **EBS status** covers the attached vo
 1. **Open the EC2 console.** Type `ec2` in the console search bar and choose **EC2**. In the left navigation pane, choose **Instances**.
     <!-- source: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-system-instance-status-check.html -->
 
-2. **Filter to your instance.** In the search box above the instance table, type `cf110-01-lab1-target`, substituting your student ID.
+2. **Filter to your instance.** In the search box above the instance table, type `cf110-01-app`, substituting your student ID.
 
     **Expected Result:** Exactly one instance, with **Instance state** showing `Running`.
 
@@ -109,7 +109,7 @@ The console shows two more alongside them. **EBS status** covers the attached vo
     <!-- source: https://docs.aws.amazon.com/cloudshell/latest/userguide/working-with-aws-cli.html -->
 
     ```bash
-    INSTANCE_ID=$(aws ec2 describe-instances --region "${REGION}" --filters "Name=tag:Name,Values=cf110-${STUDENT_ID}-lab1-target" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
+    INSTANCE_ID=$(aws ec2 describe-instances --region "${REGION}" --filters "Name=tag:Name,Values=cf110-${STUDENT_ID}-app" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
     ```
     <!-- source: https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-instances.html -->
 
@@ -125,7 +125,7 @@ The console shows two more alongside them. **EBS status** covers the attached vo
 > ```bash
 > STUDENT_ID=01
 > REGION=$AWS_REGION
-> INSTANCE_ID=$(aws ec2 describe-instances --region "${REGION}" --filters "Name=tag:Name,Values=cf110-${STUDENT_ID}-lab1-target" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
+> INSTANCE_ID=$(aws ec2 describe-instances --region "${REGION}" --filters "Name=tag:Name,Values=cf110-${STUDENT_ID}-app" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
 > ```
 >
 > An unset variable expands to an empty string rather than raising an error, which is why the failure looks like a missing resource instead of a missing variable.
@@ -420,7 +420,7 @@ A 1 GiB gp2 volume is attached to your Lab 1 instance at `/dev/sdf`. Someone has
 1. **Read the volume's configuration.**
 
     ```bash
-    VOL=$(aws ec2 describe-volumes --region "${REGION}" --filters "Name=tag:Name,Values=cf110-${STUDENT_ID}-lab1-burst-volume" --query "Volumes[].VolumeId" --output text)
+    VOL=$(aws ec2 describe-volumes --region "${REGION}" --filters "Name=tag:Name,Values=cf110-${STUDENT_ID}-burst-volume" --query "Volumes[].VolumeId" --output text)
     ```
     <!-- source: https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-volumes.html -->
 

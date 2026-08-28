@@ -52,15 +52,18 @@ This lab uses the same pre-deployed environment as Lab 1. **You create nothing**
 | IAM role — application identity | `cf110-01-MyAppRole` | Task 1 |
 | IAM role — the caller | `cf110-01-SourceRole` | Task 2 |
 | IAM role — the target | `cf110-01-TargetRole` | Task 2 |
-| IAM role — Lab 1 EC2 role | `cf110-01-lab1-ec2-role` | Task 2 |
-| EC2 instance in the private subnet | `cf110-01-lab2-private` | Task 3 |
+| IAM role — an unrelated EC2 role | `cf110-01-lab1-ec2-role` | Task 2 |
+| EC2 instance — the application server | `cf110-01-app` | Tasks 1 and 4 |
+| Security group on the application server | `cf110-01-app-sg` | Task 4 |
 | Private subnet and its route table | `cf110-01-private` | Task 3 |
+| Security group for the private subnet | `cf110-01-private-sg` | Task 3 |
 | NAT gateway | `cf110-01-nat` | Task 3 |
 | Application Load Balancer and target group | `cf110-01-alb`, `cf110-01-tg` | Task 4 |
-| Target instance and its security group | `cf110-01-alb-target` | Task 4 |
 | VPC Flow Logs log group | `/cf110/01/vpc-flow-logs` | Task 4 |
 
 Substitute your own student ID for `01` throughout.
+
+> **Note:** There is exactly one EC2 instance in your environment, `cf110-01-app`, and it is the same instance you used in Lab 1. It carries the application's identity in Task 1 and sits behind the load balancer in Task 4. Every command below that names an instance names that one.
 
 > **Note:** Your VPC uses the CIDR `10.60.0.0/16`. Several queries in this lab filter on addresses in that range. If your handout shows a different CIDR, adjust those filters — a query that filters on the wrong range returns zero rows and looks like a healthy result.
 
@@ -103,19 +106,19 @@ An application running on an EC2 instance reports `AccessDenied` when it reads f
 
     **Expected Result:** Both values print. If `BUCKET` is empty, your `STUDENT_ID` does not match your resource names.
 
-> **Common Pitfall:** `STUDENT_ID`, `REGION`, `ACCOUNT` and `PRIVATE_ID` are used by every remaining task in this lab, and a CloudShell session drops its shell variables when it times out after a period of inactivity. If you take a break and return to find commands returning nothing — particularly in Task 3, which reuses `PRIVATE_ID` set in step 2 below — the variables are gone rather than the resources. Re-run steps 1 and 2 to restore them.
+> **Common Pitfall:** `STUDENT_ID`, `REGION`, `ACCOUNT` and `APP_ID` are used by every remaining task in this lab, and a CloudShell session drops its shell variables when it times out after a period of inactivity. If you take a break and return to find commands returning nothing, the variables are gone rather than the resources. Re-run steps 1 and 2 to restore them.
 >
 > An unset variable expands to an empty string rather than raising an error, so `--instance-ids ""` fails as though the instance were missing. If a command behaves as if a resource has vanished, echo the variable before investigating the resource.
 
 2. **Find which role the application actually runs as.** Never assume — an instance profile is the only thing that determines an EC2 application's identity.
 
     ```bash
-    PRIVATE_ID=$(aws ec2 describe-instances --region "${REGION}" --filters "Name=tag:Name,Values=cf110-${STUDENT_ID}-lab2-private" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
+    APP_ID=$(aws ec2 describe-instances --region "${REGION}" --filters "Name=tag:Name,Values=cf110-${STUDENT_ID}-app" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
     ```
     <!-- source: https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-instances.html -->
 
     ```bash
-    aws ec2 describe-instances --region "${REGION}" --instance-ids "${PRIVATE_ID}" --query "Reservations[].Instances[].IamInstanceProfile.Arn" --output text
+    aws ec2 describe-instances --region "${REGION}" --instance-ids "${APP_ID}" --query "Reservations[].Instances[].IamInstanceProfile.Arn" --output text
     ```
     <!-- source: https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-instances.html -->
 
@@ -219,7 +222,7 @@ Either one missing produces `AccessDenied`, and the error text barely distinguis
     ]
     ```
 
-    The account ID is yours and the student ID is yours, but the shape is the point: the trusted principal is **`cf110-01-lab1-ec2-role`** — the Lab 1 EC2 role. It is not `cf110-01-SourceRole`.
+    The account ID is yours and the student ID is yours, but the shape is the point: the trusted principal is **`cf110-01-lab1-ec2-role`** — an unrelated EC2 role that is not attached to anything in this lab. It is not `cf110-01-SourceRole`.
 
 3. **State the fault precisely.** `SourceRole` is allowed to call `AssumeRole`, and `TargetRole` does not accept `SourceRole`. The permissions half passes and the trust half fails, so the call is denied.
 
@@ -266,26 +269,28 @@ Either one missing produces `AccessDenied`, and the error text barely distinguis
 
 **Goal:** Find why an instance in a private subnet cannot reach the internet, eliminating each candidate in turn.
 
-A batch worker in the private subnet cannot download its dependencies. Four things could be responsible: the security group, the network ACL, the NAT gateway, or the route table. Check them in that order and the answer arrives by elimination.
+A batch worker runs in the private subnet on a schedule, and every run fails to download its dependencies. The instance is terminated between runs, so there is nothing running to log into — the whole diagnosis has to be done against the subnet's configuration, which is the realistic case for ephemeral and autoscaled workloads. Four things could be responsible: the security group, the network ACL, the NAT gateway, or the route table. Check them in that order and the answer arrives by elimination.
 
-1. **Identify the instance and its subnet.**
+1. **Identify the subnet.** Find it by name rather than by asking an instance, because no instance is running there.
 
     ```bash
-    SUBNET=$(aws ec2 describe-instances --region "${REGION}" --instance-ids "${PRIVATE_ID}" --query "Reservations[].Instances[].SubnetId" --output text)
+    SUBNET=$(aws ec2 describe-subnets --region "${REGION}" --filters "Name=tag:Name,Values=cf110-${STUDENT_ID}-private" --query "Subnets[].SubnetId" --output text)
     ```
-    <!-- source: https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-instances.html -->
+    <!-- source: https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-subnets.html -->
 
     ```bash
-    echo "instance=${PRIVATE_ID} subnet=${SUBNET}"
+    echo "subnet=${SUBNET}"
     ```
     <!-- source: https://docs.aws.amazon.com/cloudshell/latest/userguide/working-with-aws-cli.html -->
 
-    **Expected Result:** Both values print, for example `instance=i-0a1b2c3d4e5f67890 subnet=subnet-0a1b2c3d4e5f67890`.
+    **Expected Result:** One subnet ID prints, for example `subnet=subnet-0a1b2c3d4e5f67890`. If it is empty, your `STUDENT_ID` does not match your resource names.
+
+> **Key Insight:** NACLs and route tables attach to the *subnet*, and a security group is a standalone VPC object that an instance merely references. None of the four candidates lives inside the guest OS. That is why this whole task is diagnosable with no host to log into — and why "I'll SSH in and look around" is often the slowest available route to the answer.
 
 2. **Rule out the security group.** Outbound traffic is governed by egress rules.
 
     ```bash
-    aws ec2 describe-security-groups --region "${REGION}" --filters "Name=group-name,Values=cf110-${STUDENT_ID}-lab2-private-sg" --query "SecurityGroups[].IpPermissionsEgress" --output json
+    aws ec2 describe-security-groups --region "${REGION}" --filters "Name=group-name,Values=cf110-${STUDENT_ID}-private-sg" --query "SecurityGroups[].IpPermissionsEgress" --output json
     ```
     <!-- source: https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-security-groups.html -->
 
@@ -378,7 +383,7 @@ The load balancer in front of the web tier reports its target as unhealthy. The 
 3. **Read the target's inbound rules.**
 
     ```bash
-    aws ec2 describe-security-groups --region "${REGION}" --filters "Name=group-name,Values=cf110-${STUDENT_ID}-alb-target-sg" --query "SecurityGroups[].{Name:GroupName,Id:GroupId,Ingress:IpPermissions}" --output json
+    aws ec2 describe-security-groups --region "${REGION}" --filters "Name=group-name,Values=cf110-${STUDENT_ID}-app-sg" --query "SecurityGroups[].{Name:GroupName,Id:GroupId,Ingress:IpPermissions}" --output json
     ```
     <!-- source: https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-security-groups.html -->
 
@@ -387,7 +392,7 @@ The load balancer in front of the web tier reports its target as unhealthy. The 
     ```json
     [
         {
-            "Name": "cf110-01-alb-target-sg",
+            "Name": "cf110-01-app-sg",
             "Id": "sg-0a1b2c3d4e5f67890",
             "Ingress": []
         }
