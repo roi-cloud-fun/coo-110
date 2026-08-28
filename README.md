@@ -13,6 +13,9 @@ deployed **broken on purpose**. Students create nothing — they diagnose what i
 coo-110/
 ├── lab_1/README.md   AWS Compute and Storage Troubleshooting  (60 min)
 ├── lab_2/README.md   AWS IAM and Network Troubleshooting      (60 min)
+├── bonus/            Optional self-paced Azure labs - not taught in class
+│   ├── lab_3_azure_compute_storage/
+│   └── lab_4_azure_iam_network/
 └── demo/             Instructor demo environments - Terraform + runbooks
     ├── aws/          OrderFlow on AWS   - demos for chapters 1-5
     └── azure/        OrderFlow on Azure - demos for chapters 6-10
@@ -160,3 +163,27 @@ invented.
 
 Every command carries an HTML comment citing the AWS documentation page it came from. Those
 render invisibly on GitHub but are present in the raw markdown.
+
+---
+
+## Bonus: the Azure labs
+
+Two further labs cover the same four fault shapes in Azure. They are **optional, self-paced, and
+not delivered in class**:
+
+- **[Lab 3 — Azure Compute and Storage](bonus/lab_3_azure_compute_storage/README.md)**
+- **[Lab 4 — Azure IAM and Network](bonus/lab_4_azure_iam_network/README.md)**
+
+Two caveats, stated plainly at the top of each guide:
+
+1. **No environment is provided.** The taught labs run on a per-student stack your instructor
+   deploys. There is no Azure equivalent — you need your own subscription. The instructor demo
+   stack at [`demo/azure`](demo/azure/README.md) builds roughly half of what they need (storage
+   with a control-plane-only managed identity, the NSG and route-table faults, the blocked health
+   probe); it has no App Service and no Key Vault.
+2. **Their expected results are documentation-derived, not observed.** Every command in Labs 1
+   and 2 was executed against live infrastructure and its real output is what those guides print.
+   That is not true of the Azure labs. Adapt to your own tenant.
+
+Worth doing anyway: working the same four fault shapes in a second cloud is what turns a set of
+AWS commands into a method that transfers. That transfer is the point of the course.
