@@ -32,8 +32,18 @@ This lab uses the same pre-deployed environment as Lab 1. **You create nothing**
 **What you need:**
 
 - [ ] Your student ID, and the handout your instructor issued for your stack
-- [ ] AWS Console access with your lab IAM sign-in, in the class region
+- [ ] AWS Console access with your lab IAM sign-in, set to **your** region (your handout names it)
 - [ ] Your completed Lab 1 playbook entries — the method carries over
+
+> **Check your region before anything else.** Students in this class are spread across more than
+> one AWS region, so there is no single "class region" — your handout names yours, and it may not
+> be the one the console opens in. Set the region selector in the top navigation bar to match your
+> handout before you run a single command.
+>
+> This matters more than it sounds. CloudShell takes `AWS_REGION` from whichever region the
+> console is showing, and every command in this lab uses it. In the wrong region they do not
+> error — they return **nothing at all**, which reads exactly like a missing resource. If a
+> command comes back empty, check the region before you check anything else.
 
 **Already provisioned for you:**
 
