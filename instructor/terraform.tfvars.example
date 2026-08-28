@@ -1,0 +1,16 @@
+# Copy to terraform.tfvars and edit. Every value below is already the default
+# in variables.tf -- this file exists to show what is worth changing.
+
+region        = "us-east-1"
+vpc_cidr      = "10.60.0.0/16"
+instance_type = "t3.micro"
+
+# The NAT gateway is the single largest line item (~$1.08/day/student) and it is
+# also the most constrained resource: AWS allows 10 NAT gateways per
+# Availability Zone, and every student's NAT lands in the same AZ. That caps a
+# region at 10 students.
+#
+# Set false to skip it if you are only running Lab 1. Lab 2 Task 3 still
+# diagnoses correctly without it -- the missing route is the fault either way --
+# but students cannot apply the fix and see it work.
+create_nat_gateway = true

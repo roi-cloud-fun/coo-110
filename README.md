@@ -16,6 +16,9 @@ coo-110/
 ├── bonus/            Optional self-paced Azure labs - not taught in class
 │   ├── lab_3_azure_compute_storage/
 │   └── lab_4_azure_iam_network/
+├── instructor/       Terraform for the per-student lab environments
+│   ├── *.tf          The stack each student diagnoses (contains the answers)
+│   └── bin/          Bulk deploy, destroy and pre-class verification
 └── demo/             Instructor demo environments - Terraform + runbooks
     ├── aws/          OrderFlow on AWS   - demos for chapters 1-5
     └── azure/        OrderFlow on Azure - demos for chapters 6-10
@@ -24,9 +27,11 @@ coo-110/
 **Students** need only `lab_1/` and `lab_2/` — their environment is deployed for them and they
 never run Terraform.
 
-**Instructors** deploy the demo stacks once for the front of the room. Each stands up
-"OrderFlow" — the same small order-processing application — carrying one injected fault per
-chapter, with flow logs, audit logging, a dashboard and alarms wired around it.
+**Instructors** do two deployments. Before the class, one lab stack per student from
+[`instructor/`](instructor/README.md) — that is what students spend the day diagnosing. Then
+the demo stacks once, for the front of the room. Each demo stack stands up "OrderFlow" — the
+same small order-processing application — carrying one injected fault per chapter, with flow
+logs, audit logging, a dashboard and alarms wired around it.
 
 | Stack | Chapters | Cost | |
 |---|---|---|---|
